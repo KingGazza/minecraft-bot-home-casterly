@@ -168,7 +168,7 @@ async function gatherResources(bot) {
     isGathering = true;
     const target = resources[0];
     const block = bot.blockAt(target);
-    if (block && bot.canDig(block)) {
+    if (block && bot.canDigBlock(block)) {
       try {
         console.log(`[${config.username}] Mining: ${block.name}`);
         await bot.dig(block);
