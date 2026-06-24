@@ -20,7 +20,7 @@ services:
       VIEW_DISTANCE: "10"
       MAX_PLAYERS: "20"
       ONLINE_MODE: "false"
-      PLUGINS: "https://github.com/ViaVersion/ViaVersion/releases/download/5.2.1/ViaVersion-5.2.1.jar"
+      PLUGINS: "https://github.com/ViaVersion/ViaVersion/releases/download/5.10.0/ViaVersion-5.10.0.jar"
     ports:
       - "${MINECRAFT_PORT:-25565}:25565"
       - "${RCON_PORT:-25575}:25575"
