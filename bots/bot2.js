@@ -23,7 +23,10 @@ let ollamaReady = false;
 let isGathering = false;
 let mcData;
 
-const botNames = ['AI_Fighter', 'AI_Gatherer', 'Mr_Angry', 'Mr_Helpful'];
+const botNames = ['AI_Fighter', 'AI_Gatherer', 'Mr_Angry', 'Mr_Helpful',
+  'Mr_Angry_Nox', 'Mr_Helpful_Nox',
+  'Mr_Angry_KAT', 'Mr_Helpful_KAT',
+  'Mr_Angry_NED', 'Mr_Helpful_NED'];
 
 function createBot() {
   const bot = mineflayer.createBot(config);

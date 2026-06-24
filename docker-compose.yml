@@ -14,7 +14,7 @@ services:
       MEMORY: "2G"
       ENABLE_RCON: "true"
       RCON_PORT: 25575
-      RCON_PASSWORD: "${RCON_PASSWORD}"  # Portainer stack variable
+      RCON_PASSWORD: "${RCON_PASSWORD}"
       ENABLE_COMMAND_BLOCK: "true"
       SPAWN_PROTECTION: "0"
       VIEW_DISTANCE: "10"
@@ -50,23 +50,21 @@ services:
       - minecraft-network
 
   # ============================================
-  # 3. Bot 1 - Fighter/Guardian
+  # Nox's bots
   # ============================================
-  bot-fighter:
+  fighter-nox:
     build:
       context: ./bots
       dockerfile: Dockerfile.bot
-    container_name: bot_fighter
+    container_name: fighter_nox
     environment:
-      - BOT_NAME=Mr_Angry
-      - BOT_ROLE=fighter
+      - BOT_NAME=Mr_Angry_Nox
       - MC_HOST=minecraft-java
       - MC_PORT=25565
       - OLLAMA_HOST=host.docker.internal
       - OLLAMA_PORT=11434
       - OLLAMA_MODEL=${OLLAMA_MODEL:-gemma4:e2b}
-      - PLAYER_NAME=${PLAYER_NAME}  # Portainer stack variable
-      - RCON_PASSWORD=${RCON_PASSWORD}  # Pass through for potential RCON use
+      - PLAYER_NAME=Nox
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -76,24 +74,113 @@ services:
       - minecraft-network
     command: node /app/bot1.js
 
-  # ============================================
-  # 4. Bot 2 - Gatherer/Builder
-  # ============================================
-  bot-gatherer:
+  gatherer-nox:
     build:
       context: ./bots
       dockerfile: Dockerfile.bot
-    container_name: bot_gatherer
+    container_name: gatherer_nox
     environment:
-      - BOT_NAME=Mr_Helpful
-      - BOT_ROLE=gatherer
+      - BOT_NAME=Mr_Helpful_Nox
       - MC_HOST=minecraft-java
       - MC_PORT=25565
       - OLLAMA_HOST=host.docker.internal
       - OLLAMA_PORT=11434
       - OLLAMA_MODEL=${OLLAMA_MODEL:-gemma4:e2b}
-      - PLAYER_NAME=${PLAYER_NAME}  # Portainer stack variable
-      - RCON_PASSWORD=${RCON_PASSWORD}  # Pass through for potential RCON use
+      - PLAYER_NAME=Nox
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - minecraft-java
+    restart: unless-stopped
+    networks:
+      - minecraft-network
+    command: node /app/bot2.js
+
+  # ============================================
+  # KAT's bots
+  # ============================================
+  fighter-kat:
+    build:
+      context: ./bots
+      dockerfile: Dockerfile.bot
+    container_name: fighter_kat
+    environment:
+      - BOT_NAME=Mr_Angry_KAT
+      - MC_HOST=minecraft-java
+      - MC_PORT=25565
+      - OLLAMA_HOST=host.docker.internal
+      - OLLAMA_PORT=11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-gemma4:e2b}
+      - PLAYER_NAME=KAT
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - minecraft-java
+    restart: unless-stopped
+    networks:
+      - minecraft-network
+    command: node /app/bot1.js
+
+  gatherer-kat:
+    build:
+      context: ./bots
+      dockerfile: Dockerfile.bot
+    container_name: gatherer_kat
+    environment:
+      - BOT_NAME=Mr_Helpful_KAT
+      - MC_HOST=minecraft-java
+      - MC_PORT=25565
+      - OLLAMA_HOST=host.docker.internal
+      - OLLAMA_PORT=11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-gemma4:e2b}
+      - PLAYER_NAME=KAT
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - minecraft-java
+    restart: unless-stopped
+    networks:
+      - minecraft-network
+    command: node /app/bot2.js
+
+  # ============================================
+  # NED's bots
+  # ============================================
+  fighter-ned:
+    build:
+      context: ./bots
+      dockerfile: Dockerfile.bot
+    container_name: fighter_ned
+    environment:
+      - BOT_NAME=Mr_Angry_NED
+      - MC_HOST=minecraft-java
+      - MC_PORT=25565
+      - OLLAMA_HOST=host.docker.internal
+      - OLLAMA_PORT=11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-gemma4:e2b}
+      - PLAYER_NAME=NED
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - minecraft-java
+    restart: unless-stopped
+    networks:
+      - minecraft-network
+    command: node /app/bot1.js
+
+  gatherer-ned:
+    build:
+      context: ./bots
+      dockerfile: Dockerfile.bot
+    container_name: gatherer_ned
+    environment:
+      - BOT_NAME=Mr_Helpful_NED
+      - MC_HOST=minecraft-java
+      - MC_PORT=25565
+      - OLLAMA_HOST=host.docker.internal
+      - OLLAMA_PORT=11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-gemma4:e2b}
+      - PLAYER_NAME=NED
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
