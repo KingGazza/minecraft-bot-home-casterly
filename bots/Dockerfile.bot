@@ -1,0 +1,10 @@
+FROM node:18-slim
+
+# Install dependencies to /deps so the ./bots:/app volume mount doesn't mask them
+WORKDIR /deps
+COPY package*.json ./
+RUN npm install && npm cache clean --force
+ENV NODE_PATH=/deps/node_modules
+
+WORKDIR /app
+CMD ["node", "/app/bot1.js"]

@@ -1,0 +1,8 @@
+{
+  "name": "minecraft-bots",
+  "version": "1.0.0",
+  "description": "AI-powered Minecraft bots",
+  "dependencies": {
+    "mineflayer": "^4.20.0"
+  }
+}
