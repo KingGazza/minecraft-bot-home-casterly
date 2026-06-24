@@ -27,7 +27,7 @@ let mcData;
 const botNames = ['AI_Fighter', 'AI_Gatherer', 'Mr_Angry', 'Mr_Helpful',
   'Mr_Angry_Nox', 'Mr_Helpful_Nox',
   'Mr_Angry_KAT', 'Mr_Helpful_KAT',
-  'Mr_Angry_NED', 'Mr_Helpful_NED'];
+  'Mr_Angry_gelg3275', 'Mr_Helpful_gelg3275'];
 
 // Global error handler
 process.on('uncaughtException', (err) => {
@@ -84,9 +84,14 @@ function createBot() {
 
   bot.on('chat', async (username, message) => {
     if (username === config.username) return;
-    if (botNames.includes(username)) return;
-    // Only respond to assigned player
-    if (username !== ownerName) return;
+
+    // Another bot talking — only respond if they mention my name
+    if (botNames.includes(username)) {
+      if (!message.toLowerCase().includes(config.username.toLowerCase())) return;
+    } else {
+      // For players, only respond to owner
+      if (username !== ownerName) return;
+    }
 
     console.log(`[${config.username}] 💬 ${username}: ${message}`);
 

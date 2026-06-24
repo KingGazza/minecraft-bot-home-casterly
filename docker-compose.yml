@@ -141,21 +141,21 @@ services:
     command: node /app/bot2.js
 
   # ============================================
-  # NED's bots
+  # gelg3275's bots
   # ============================================
-  fighter-ned:
+  fighter-gelg3275:
     build:
       context: ./bots
       dockerfile: Dockerfile.bot
-    container_name: fighter_ned
+    container_name: fighter_gelg3275
     environment:
-      - BOT_NAME=Mr_Angry_NED
+      - BOT_NAME=Mr_Angry_gelg3275
       - MC_HOST=minecraft-java
       - MC_PORT=25565
       - OLLAMA_HOST=host.docker.internal
       - OLLAMA_PORT=11434
       - OLLAMA_MODEL=${OLLAMA_MODEL:-gemma4:e2b}
-      - PLAYER_NAME=NED
+      - PLAYER_NAME=gelg3275
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -165,19 +165,19 @@ services:
       - minecraft-network
     command: node /app/bot1.js
 
-  gatherer-ned:
+  gatherer-gelg3275:
     build:
       context: ./bots
       dockerfile: Dockerfile.bot
-    container_name: gatherer_ned
+    container_name: gatherer_gelg3275
     environment:
-      - BOT_NAME=Mr_Helpful_NED
+      - BOT_NAME=Mr_Helpful_gelg3275
       - MC_HOST=minecraft-java
       - MC_PORT=25565
       - OLLAMA_HOST=host.docker.internal
       - OLLAMA_PORT=11434
       - OLLAMA_MODEL=${OLLAMA_MODEL:-gemma4:e2b}
-      - PLAYER_NAME=NED
+      - PLAYER_NAME=gelg3275
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
