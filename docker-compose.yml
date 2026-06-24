@@ -20,6 +20,7 @@ services:
       VIEW_DISTANCE: "10"
       MAX_PLAYERS: "20"
       ONLINE_MODE: "false"
+      VIAVERSION: "latest"
     ports:
       - "${MINECRAFT_PORT:-25565}:25565"
       - "${RCON_PORT:-25575}:25575"
