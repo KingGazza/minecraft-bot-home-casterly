@@ -59,6 +59,9 @@ function createBot() {
 
     bot.chat(`I'm ${config.username}! Say "follow me" for protection!`);
 
+    // Equip best available armor and weapon from inventory
+    equipBestGear(bot);
+
     setInterval(() => {
       // If owner joins later, start following
       if (!following && ownerName && bot.players[ownerName]?.entity) {
@@ -173,6 +176,40 @@ Keep responses very short (1-2 sentences).`;
     const msg = typeof reason === 'string' ? reason : JSON.stringify(reason);
     console.log(`[${config.username}] Kicked: ${msg}`);
   });
+}
+
+// Equip best armor and weapon from inventory
+function equipBestGear(bot) {
+  const items = bot.inventory.items();
+
+  // Slot map: what armor type goes in which equipment slot
+  const armorMap = {
+    helmet: 'head',
+    chestplate: 'torso',
+    leggings: 'legs',
+    boots: 'feet'
+  };
+
+  for (const [type, slot] of Object.entries(armorMap)) {
+    const gear = items.filter(i => i.name.includes(type));
+    if (gear.length > 0) {
+      gear.sort((a, b) => (b.armor || 0) - (a.armor || 0));
+      try { bot.equip(gear[0], slot); } catch (e) {}
+    }
+  }
+
+  // Equip best sword
+  const swords = items.filter(i => i.name.includes('sword'));
+  if (swords.length > 0) {
+    swords.sort((a, b) => (b.attackDamage || 0) - (a.attackDamage || 0));
+    try { bot.equip(swords[0], 'hand'); } catch (e) {}
+  }
+
+  // If no armor at all, ask for it
+  const hasAnyArmor = items.some(i => Object.keys(armorMap).some(t => i.name.includes(t)));
+  if (!hasAnyArmor) {
+    console.log(`[${config.username}] ⚠️ No armor found — need gear to survive!`);
+  }
 }
 
 console.log(`[${config.username}] Starting...`);

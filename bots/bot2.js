@@ -22,6 +22,7 @@ let following = null;
 let ollamaReady = false;
 let isGathering = false;
 let gatherTarget = null; // null = any resource, or specific type like 'oak', 'iron_ore'
+let lastActivity = Date.now(); // track activity for idle auto-gather
 let mcData;
 
 const botNames = ['AI_Fighter', 'AI_Gatherer', 'Mr_Angry', 'Mr_Helpful',
@@ -66,6 +67,7 @@ function createBot() {
         const target = bot.players[following]?.entity;
         if (target && target.position.distanceTo(bot.entity.position) > 6) {
           bot.pathfinder.setGoal(new goals.GoalFollow(target, 5));
+          lastActivity = Date.now();
         }
       }
     }, 3000);
@@ -78,8 +80,19 @@ function createBot() {
           bot.pathfinder.setGoal(new goals.GoalFollow(bot.players[ownerName].entity, 5));
         }
         console.log(`[${config.username}] Owner ${ownerName} joined, following`);
+        lastActivity = Date.now();
       }
     }, 10000);
+
+    // Auto-gather when idle for 60+ seconds (owner offline, no commands)
+    setInterval(() => {
+      const idleTime = Date.now() - lastActivity;
+      if (!following && !isGathering && idleTime > 60000) {
+        console.log(`[${config.username}] Idle ${Math.round(idleTime/1000)}s, auto-gathering...`);
+        gatherResources(bot, null);
+        lastActivity = Date.now();
+      }
+    }, 15000);
   });
 
   bot.on('chat', async (username, message) => {
@@ -94,6 +107,7 @@ function createBot() {
     }
 
     console.log(`[${config.username}] 💬 ${username}: ${message}`);
+    lastActivity = Date.now(); // any chat = not idle
 
     const aiAvailable = await ollama.isAvailable();
 
