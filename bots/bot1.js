@@ -137,23 +137,26 @@ Keep responses very short (1-2 sentences).`;
         } else if (lower.includes('[action:help]') || lower.includes('help')) {
           bot.chat('Commands: follow me, attack, guard, stop');
         }
+        return; // AI handled it, skip rule-based fallback
       }
-    } else {
-      const lower = message.toLowerCase();
-      if (lower.includes('follow me') || (lower.includes('follow') && !lower.includes('stop'))) {
-        const entity = bot.players[username]?.entity;
-        if (entity) { following = username; bot.pathfinder.setGoal(new goals.GoalFollow(entity, 3)); bot.chat(`Following you, ${username}!`); }
-      } else if (lower.includes('attack') || lower.includes('fight')) {
-        const mob = bot.nearestEntity((e) => e.type === 'mob');
-        if (mob) { isFighting = true; bot.attack(mob); setTimeout(() => { isFighting = false; }, 1000); bot.chat('Attacking!'); }
-        else { bot.chat('No mobs nearby!'); }
-      } else if (lower.includes('guard') || lower.includes('stay')) {
-        following = null; bot.pathfinder.setGoal(null); bot.chat('Guarding!');
-      } else if (lower.includes('stop')) {
-        following = null; bot.pathfinder.setGoal(null); isFighting = false; bot.chat('Stopped!');
-      } else if (lower.includes('help')) {
-        bot.chat('Commands: follow me, attack, guard, stop');
-      }
+      // AI returned null (timeout/error) — fall through to rule-based
+    }
+
+    // Rule-based fallback (no AI, or AI timed out)
+    const lower = message.toLowerCase();
+    if (lower.includes('follow me') || (lower.includes('follow') && !lower.includes('stop'))) {
+      const entity = bot.players[username]?.entity;
+      if (entity) { following = username; bot.pathfinder.setGoal(new goals.GoalFollow(entity, 3)); bot.chat(`Following you, ${username}!`); }
+    } else if (lower.includes('attack') || lower.includes('fight')) {
+      const mob = bot.nearestEntity((e) => e.type === 'mob');
+      if (mob) { isFighting = true; bot.attack(mob); setTimeout(() => { isFighting = false; }, 1000); bot.chat('Attacking!'); }
+      else { bot.chat('No mobs nearby!'); }
+    } else if (lower.includes('guard') || lower.includes('stay')) {
+      following = null; bot.pathfinder.setGoal(null); bot.chat('Guarding!');
+    } else if (lower.includes('stop')) {
+      following = null; bot.pathfinder.setGoal(null); isFighting = false; bot.chat('Stopped!');
+    } else if (lower.includes('help')) {
+      bot.chat('Commands: follow me, attack, guard, stop');
     }
   });
 

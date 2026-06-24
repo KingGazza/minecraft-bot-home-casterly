@@ -132,35 +132,37 @@ function createBot() {
         } else if (lower.includes('[action:help]') || lower.includes('help')) {
           bot.chat('Commands: follow me, gather, inventory, drop, stop');
         }
+        return; // AI handled it, skip rule-based fallback
       }
-    } else {
-      const lower = message.toLowerCase();
-      if (lower.includes('follow me') || (lower.includes('follow') && !lower.includes('stop'))) {
-        const entity = bot.players[username]?.entity;
-        if (entity) { following = username; bot.pathfinder.setGoal(new goals.GoalFollow(entity, 5)); bot.chat(`Following you, ${username}!`); }
-      } else if (lower.includes('gather') || lower.includes('collect')) {
-        // Extract resource from message like "gather oak" or "collect iron ore"
-        const resourceMatch = message.match(/(?:gather|collect)\s+(.+)/i);
-        if (resourceMatch) {
-          gatherTarget = resourceMatch[1].toLowerCase().trim();
-          bot.chat(`Gathering ${gatherTarget}!`);
-        } else {
-          gatherTarget = null;
-          bot.chat('Gathering!');
-        }
-        gatherResources(bot, gatherTarget);
-      } else if (lower.includes('inventory')) {
-        const items = bot.inventory.items();
-        const c = items.reduce((s, i) => s + i.count, 0);
-        bot.chat(`Inventory: ${items.length} types, ${c} total`);
-      } else if (lower.includes('drop')) {
-        bot.inventory.items().forEach(i => bot.tossStack(i));
-        bot.chat('Dropped!');
-      } else if (lower.includes('stop')) {
-        isGathering = false; following = null; bot.pathfinder.setGoal(null); bot.chat('Stopped!');
-      } else if (lower.includes('help')) {
-        bot.chat('Commands: follow me, gather, inventory, drop, stop');
+      // AI returned null (timeout/error) — fall through to rule-based
+    }
+
+    // Rule-based fallback (no AI, or AI timed out)
+    const lower = message.toLowerCase();
+    if (lower.includes('follow me') || (lower.includes('follow') && !lower.includes('stop'))) {
+      const entity = bot.players[username]?.entity;
+      if (entity) { following = username; bot.pathfinder.setGoal(new goals.GoalFollow(entity, 5)); bot.chat(`Following you, ${username}!`); }
+    } else if (lower.includes('gather') || lower.includes('collect')) {
+      const resourceMatch = message.match(/(?:gather|collect)\s+(.+)/i);
+      if (resourceMatch) {
+        gatherTarget = resourceMatch[1].toLowerCase().trim();
+        bot.chat(`Gathering ${gatherTarget}!`);
+      } else {
+        gatherTarget = null;
+        bot.chat('Gathering!');
       }
+      gatherResources(bot, gatherTarget);
+    } else if (lower.includes('inventory')) {
+      const items = bot.inventory.items();
+      const c = items.reduce((s, i) => s + i.count, 0);
+      bot.chat(`Inventory: ${items.length} types, ${c} total`);
+    } else if (lower.includes('drop')) {
+      bot.inventory.items().forEach(i => bot.tossStack(i));
+      bot.chat('Dropped!');
+    } else if (lower.includes('stop')) {
+      isGathering = false; following = null; bot.pathfinder.setGoal(null); bot.chat('Stopped!');
+    } else if (lower.includes('help')) {
+      bot.chat('Commands: follow me, gather, inventory, drop, stop');
     }
   });
 
