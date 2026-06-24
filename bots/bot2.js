@@ -188,11 +188,9 @@ async function gatherResources(bot, resourceType) {
       const name = block.name.toLowerCase();
 
       if (typeFilter) {
-        // Mine only the specific requested resource
         return name.includes(typeFilter);
       }
 
-      // Default: mine common resources
       return name.includes('log') || name.includes('oak') || name.includes('birch') ||
              name.includes('spruce') || name.includes('stone') || name.includes('dirt') ||
              name.includes('coal_ore') || name.includes('iron_ore');
@@ -201,21 +199,50 @@ async function gatherResources(bot, resourceType) {
     count: 5
   });
 
-  if (resources.length > 0 && !isGathering) {
-    isGathering = true;
-    const target = resources[0];
-    const block = bot.blockAt(target);
-    if (block && bot.canDigBlock(block)) {
-      try {
-        console.log(`[${config.username}] Mining: ${block.name}`);
-        await bot.dig(block);
-        console.log(`[${config.username}] Mined: ${block.name}`);
-      } catch (err) {
-        console.log(`[${config.username}] Can't mine: ${err.message}`);
-      }
-    }
-    isGathering = false;
+  if (resources.length === 0) {
+    bot.chat("Can't find any nearby!");
+    return;
   }
+
+  if (isGathering) return;
+  isGathering = true;
+
+  // Walk to and mine up to 3 blocks
+  const limit = Math.min(resources.length, 3);
+  for (let i = 0; i < limit; i++) {
+    const target = resources[i];
+    const block = bot.blockAt(target);
+    if (!block || !bot.canDigBlock(block)) continue;
+
+    try {
+      // Walk within reach if too far
+      const dist = bot.entity.position.distanceTo(target);
+      if (dist > 4) {
+        bot.pathfinder.setGoal(new goals.GoalNear(target.x, target.y, target.z, 3));
+        await new Promise(resolve => {
+          const check = setInterval(() => {
+            if (bot.entity.position.distanceTo(target) < 4 || !bot.pathfinder.isMoving()) {
+              clearInterval(check);
+              resolve();
+            }
+          }, 500);
+          setTimeout(() => { clearInterval(check); resolve(); }, 8000);
+        });
+      }
+
+      console.log(`[${config.username}] Mining: ${block.name}`);
+      await bot.dig(block);
+      console.log(`[${config.username}] Mined: ${block.name}`);
+    } catch (err) {
+      console.log(`[${config.username}] Can't mine: ${err.message}`);
+    }
+
+    // Brief pause between digs
+    await new Promise(r => setTimeout(r, 500));
+  }
+
+  isGathering = false;
+  bot.chat('Done gathering!');
 }
 
 console.log(`[${config.username}] Starting...`);
