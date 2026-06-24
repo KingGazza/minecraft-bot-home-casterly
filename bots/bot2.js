@@ -6,7 +6,7 @@ const config = {
   host: process.env.MC_HOST || 'localhost',
   port: parseInt(process.env.MC_PORT) || 25565,
   username: process.env.BOT_NAME || 'AI_Gatherer',
-  version: '1.21.4',
+  version: '1.21.3',
   auth: 'offline',
   log: false
 };

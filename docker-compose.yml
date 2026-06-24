@@ -10,7 +10,7 @@ services:
     environment:
       EULA: "TRUE"
       TYPE: "PAPER"
-      VERSION: "1.21.4"
+      VERSION: "1.21.3"
       MEMORY: "2G"
       ENABLE_RCON: "true"
       RCON_PORT: 25575
