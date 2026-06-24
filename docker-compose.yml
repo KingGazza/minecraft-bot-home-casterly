@@ -33,12 +33,12 @@ services:
   # 2. GeyserMC (Bedrock <-> Java translator)
   # ============================================
   geyser:
-    image: bmoorman/geyser:latest
+    build:
+      context: ./geyser-config
+      dockerfile: Dockerfile
     container_name: geyser
     ports:
       - "${GEYSER_PORT:-19132}:19132/udp"
-    volumes:
-      - ./geyser-config/config.yml:/var/lib/geyser/config.yml
     depends_on:
       - minecraft-java
     restart: unless-stopped
