@@ -1,0 +1,113 @@
+version: '3.8'
+
+services:
+  # ============================================
+  # 1. Java Minecraft Server (Paper)
+  # ============================================
+  minecraft-java:
+    image: itzg/minecraft-server:latest
+    container_name: java_server
+    environment:
+      EULA: "TRUE"
+      TYPE: "PAPER"
+      VERSION: "1.20.4"
+      MEMORY: "2G"
+      ENABLE_RCON: "true"
+      RCON_PORT: 25575
+      RCON_PASSWORD: "securepassword123"
+      ENABLE_COMMAND_BLOCK: "true"
+      SPAWN_PROTECTION: "0"
+      VIEW_DISTANCE: "10"
+      MAX_PLAYERS: "20"
+      ONLINE_MODE: "false"  # Allows bots to join without accounts
+    ports:
+      - "25565:25565"       # Java Edition port
+      - "25575:25575"       # RCON port
+    volumes:
+      - ./java_data:/data
+    restart: unless-stopped
+    networks:
+      - minecraft-network
+
+  # ============================================
+  # 2. GeyserMC (Bedrock <-> Java translator)
+  # ============================================
+  geyser:
+    image: geysermc/geyser:latest
+    container_name: geyser
+    environment:
+      GEYSER_ADDRESS: "0.0.0.0"
+      GEYSER_PORT: 19132
+      REMOTE_ADDRESS: "minecraft-java"
+      REMOTE_PORT: 25565
+      AUTH_TYPE: "floodgate"        # Bedrock players don't need Java accounts
+    ports:
+      - "19132:19132/udp"           # Bedrock port
+    depends_on:
+      - minecraft-java
+    restart: unless-stopped
+    networks:
+      - minecraft-network
+
+  # ============================================
+  # 3. Bot 1 - Fighter/Guardian
+  # ============================================
+  bot-fighter:
+    build:
+      context: ./bots
+      dockerfile: Dockerfile.bot
+    container_name: bot_fighter
+    environment:
+      - BOT_NAME=Mr_Angry
+      - BOT_ROLE=fighter
+      - MC_HOST=minecraft-java
+      - MC_PORT=25565
+      - OLLAMA_HOST=host.docker.internal  # Points to your host's Ollama
+      - OLLAMA_PORT=11434
+      - OLLAMA_MODEL=gemma4:e2b          # Change to your model
+      - PLAYER_NAME=Nox       # CHANGE THIS TO YOUR IGN
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # Allows Docker to reach host
+    depends_on:
+      - minecraft-java
+    restart: unless-stopped
+    networks:
+      - minecraft-network
+    volumes:
+      - ./bots:/app
+    command: node /app/bot1.js
+
+  # ============================================
+  # 4. Bot 2 - Gatherer/Builder
+  # ============================================
+  bot-gatherer:
+    build:
+      context: ./bots
+      dockerfile: Dockerfile.bot
+    container_name: bot_gatherer
+    environment:
+      - BOT_NAME=Mr_Helpful
+      - BOT_ROLE=gatherer
+      - MC_HOST=minecraft-java
+      - MC_PORT=25565
+      - OLLAMA_HOST=host.docker.internal  # Points to your host's Ollama
+      - OLLAMA_PORT=11434
+      - OLLAMA_MODEL=gemma4:e2b          # Change to your model
+      - PLAYER_NAME=Nox       # CHANGE THIS TO YOUR IGN
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # Allows Docker to reach host
+    depends_on:
+      - minecraft-java
+    restart: unless-stopped
+    networks:
+      - minecraft-network
+    volumes:
+      - ./bots:/app
+    command: node /app/bot2.js
+
+# ============================================
+# Networks
+# ============================================
+networks:
+  minecraft-network:
+    driver: bridge
