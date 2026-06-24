@@ -59,10 +59,23 @@ function createBot() {
 
     bot.chat(`I'm ${config.username}! Say "follow me" to gather together!`);
 
+    // Re-follow followed player periodically
+    setInterval(() => {
+      if (following && !isGathering) {
+        const target = bot.players[following]?.entity;
+        if (target && target.position.distanceTo(bot.entity.position) > 6) {
+          bot.pathfinder.setGoal(new goals.GoalFollow(target, 5));
+        }
+      }
+    }, 3000);
+
     setInterval(() => {
       // If owner joins later, start following
       if (!following && ownerName && bot.players[ownerName]?.entity) {
         following = ownerName;
+        if (bot.players[ownerName]?.entity) {
+          bot.pathfinder.setGoal(new goals.GoalFollow(bot.players[ownerName].entity, 5));
+        }
         console.log(`[${config.username}] Owner ${ownerName} joined, following`);
       }
       if (!isGathering && bot.inventory.items().length < 36) {
