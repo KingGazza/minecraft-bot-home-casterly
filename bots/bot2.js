@@ -21,6 +21,7 @@ const ownerName = process.env.PLAYER_NAME || '';
 let following = null;
 let ollamaReady = false;
 let isGathering = false;
+let gatherTarget = null; // null = any resource, or specific type like 'oak', 'iron_ore'
 let mcData;
 
 const botNames = ['AI_Fighter', 'AI_Gatherer', 'Mr_Angry', 'Mr_Helpful',
@@ -92,7 +93,7 @@ function createBot() {
     const aiAvailable = await ollama.isAvailable();
 
     if (aiAvailable && ollamaReady) {
-      const systemPrompt = `You are ${config.username}, a focused Minecraft helper bot for ${ownerName}.\nYour only job is to obey commands. Do NOT take initiative.\nActions (put in [brackets]):\n- [action:follow] - Follow the player\n- [action:gather] - Mine nearby resources\n- [action:inventory] - Show items\n- [action:drop] - Drop all items\n- [action:stop] - Stop following / gathering\n- [action:help] - Explain commands\nRespond in 1 short sentence. No chit-chat.`;
+      const systemPrompt = `You are ${config.username}, a focused Minecraft helper bot for ${ownerName}.\nYour only job is to obey commands. Do NOT take initiative.\nActions (put in [brackets]):\n- [action:follow] - Follow the player\n- [action:gather:resource] - Mine a specific resource (e.g. [action:gather:oak_log], [action:gather:iron_ore], [action:gather:stone], [action:gather:diamond_ore])\n- [action:inventory] - Show items\n- [action:drop] - Drop all items\n- [action:stop] - Stop following / gathering\n- [action:help] - Explain commands\nRespond in 1 short sentence. No chit-chat.`;
 
       const aiResponse = await ollama.chat(message, systemPrompt);
       if (aiResponse) {
@@ -103,8 +104,17 @@ function createBot() {
         if (lower.includes('[action:follow]') || lower.includes('follow')) {
           const entity = bot.players[username]?.entity;
           if (entity) { following = username; bot.pathfinder.setGoal(new goals.GoalFollow(entity, 5)); bot.chat(`Following you, ${username}!`); }
-        } else if (lower.includes('[action:gather]') || lower.includes('gather') || lower.includes('collect')) {
-          gatherResources(bot); bot.chat('Gathering!');
+        } else if (lower.includes('[action:gather:') || lower.includes('[action:gather]') || lower.includes('gather') || lower.includes('collect')) {
+          // Extract specific resource from [action:gather:resource_name]
+          const gatherMatch = aiResponse.match(/\[action:gather:([^\]]+)\]/i);
+          if (gatherMatch) {
+            gatherTarget = gatherMatch[1].toLowerCase().replace(/_/g, ' ');
+            bot.chat(`Gathering ${gatherTarget}!`);
+          } else {
+            gatherTarget = null; // any resource
+            bot.chat('Gathering!');
+          }
+          gatherResources(bot, gatherTarget);
         } else if (lower.includes('[action:inventory]') || lower.includes('inventory')) {
           const items = bot.inventory.items();
           const c = items.reduce((s, i) => s + i.count, 0);
@@ -124,7 +134,16 @@ function createBot() {
         const entity = bot.players[username]?.entity;
         if (entity) { following = username; bot.pathfinder.setGoal(new goals.GoalFollow(entity, 5)); bot.chat(`Following you, ${username}!`); }
       } else if (lower.includes('gather') || lower.includes('collect')) {
-        gatherResources(bot); bot.chat('Gathering!');
+        // Extract resource from message like "gather oak" or "collect iron ore"
+        const resourceMatch = message.match(/(?:gather|collect)\s+(.+)/i);
+        if (resourceMatch) {
+          gatherTarget = resourceMatch[1].toLowerCase().trim();
+          bot.chat(`Gathering ${gatherTarget}!`);
+        } else {
+          gatherTarget = null;
+          bot.chat('Gathering!');
+        }
+        gatherResources(bot, gatherTarget);
       } else if (lower.includes('inventory')) {
         const items = bot.inventory.items();
         const c = items.reduce((s, i) => s + i.count, 0);
@@ -153,11 +172,20 @@ function createBot() {
   });
 }
 
-async function gatherResources(bot) {
+async function gatherResources(bot, resourceType) {
+  const typeFilter = resourceType ? resourceType.toLowerCase() : null;
+
   const resources = bot.findBlocks({
     matching: (block) => {
       if (!block) return false;
-      const name = block.name;
+      const name = block.name.toLowerCase();
+
+      if (typeFilter) {
+        // Mine only the specific requested resource
+        return name.includes(typeFilter);
+      }
+
+      // Default: mine common resources
       return name.includes('log') || name.includes('oak') || name.includes('birch') ||
              name.includes('spruce') || name.includes('stone') || name.includes('dirt') ||
              name.includes('coal_ore') || name.includes('iron_ore');
