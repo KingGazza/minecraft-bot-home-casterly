@@ -14,15 +14,15 @@ services:
       MEMORY: "2G"
       ENABLE_RCON: "true"
       RCON_PORT: 25575
-      RCON_PASSWORD: "securepassword123"
+      RCON_PASSWORD: "${RCON_PASSWORD}"  # Portainer stack variable
       ENABLE_COMMAND_BLOCK: "true"
       SPAWN_PROTECTION: "0"
       VIEW_DISTANCE: "10"
       MAX_PLAYERS: "20"
-      ONLINE_MODE: "false"  # Allows bots to join without accounts
+      ONLINE_MODE: "false"
     ports:
-      - "25565:25565"       # Java Edition port
-      - "25575:25575"       # RCON port
+      - "${MINECRAFT_PORT:-25565}:25565"
+      - "${RCON_PORT:-25575}:25575"
     volumes:
       - ./java_data:/data
     restart: unless-stopped
@@ -40,9 +40,9 @@ services:
       GEYSER_PORT: 19132
       REMOTE_ADDRESS: "minecraft-java"
       REMOTE_PORT: 25565
-      AUTH_TYPE: "floodgate"        # Bedrock players don't need Java accounts
+      AUTH_TYPE: "floodgate"
     ports:
-      - "19132:19132/udp"           # Bedrock port
+      - "${GEYSER_PORT:-19132}:19132/udp"
     depends_on:
       - minecraft-java
     restart: unless-stopped
@@ -62,12 +62,13 @@ services:
       - BOT_ROLE=fighter
       - MC_HOST=minecraft-java
       - MC_PORT=25565
-      - OLLAMA_HOST=host.docker.internal  # Points to your host's Ollama
+      - OLLAMA_HOST=host.docker.internal
       - OLLAMA_PORT=11434
-      - OLLAMA_MODEL=gemma4:e2b          # Change to your model
-      - PLAYER_NAME=Nox       # CHANGE THIS TO YOUR IGN
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-gemma4:e2b}
+      - PLAYER_NAME=${PLAYER_NAME}  # Portainer stack variable
+      - RCON_PASSWORD=${RCON_PASSWORD}  # Pass through for potential RCON use
     extra_hosts:
-      - "host.docker.internal:host-gateway"  # Allows Docker to reach host
+      - "host.docker.internal:host-gateway"
     depends_on:
       - minecraft-java
     restart: unless-stopped
@@ -90,12 +91,13 @@ services:
       - BOT_ROLE=gatherer
       - MC_HOST=minecraft-java
       - MC_PORT=25565
-      - OLLAMA_HOST=host.docker.internal  # Points to your host's Ollama
+      - OLLAMA_HOST=host.docker.internal
       - OLLAMA_PORT=11434
-      - OLLAMA_MODEL=gemma4:e2b          # Change to your model
-      - PLAYER_NAME=Nox       # CHANGE THIS TO YOUR IGN
+      - OLLAMA_MODEL=${OLLAMA_MODEL:-gemma4:e2b}
+      - PLAYER_NAME=${PLAYER_NAME}  # Portainer stack variable
+      - RCON_PASSWORD=${RCON_PASSWORD}  # Pass through for potential RCON use
     extra_hosts:
-      - "host.docker.internal:host-gateway"  # Allows Docker to reach host
+      - "host.docker.internal:host-gateway"
     depends_on:
       - minecraft-java
     restart: unless-stopped
