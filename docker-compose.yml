@@ -33,7 +33,7 @@ services:
   # 2. GeyserMC (Bedrock <-> Java translator)
   # ============================================
   geyser:
-    image: geysermc/geyser:latest
+    image: bmoorman/geyser:latest
     container_name: geyser
     environment:
       GEYSER_ADDRESS: "0.0.0.0"
