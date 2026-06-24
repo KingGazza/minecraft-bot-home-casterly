@@ -17,7 +17,8 @@ const ollama = new OllamaClient(
   process.env.OLLAMA_MODEL || 'llama3.2:3b'
 );
 
-const playerName = process.env.PLAYER_NAME || 'YourBedrockName';
+const ownerName = process.env.PLAYER_NAME || '';
+let following = null;
 let ollamaReady = false;
 
 const bot = mineflayer.createBot(config);
@@ -40,15 +41,15 @@ bot.once('spawn', async () => {
   const defaultMove = new Movements(bot, mcData);
   bot.pathfinder.setMovements(defaultMove);
 
-  const player = bot.players[playerName]?.entity;
-  if (player) {
-    bot.pathfinder.setGoal(new goals.GoalFollow(player, 5));
-    console.log(`[${config.username}] Following ${playerName}`);
+  if (ownerName && bot.players[ownerName]?.entity) {
+    following = ownerName;
+    bot.pathfinder.setGoal(new goals.GoalFollow(bot.players[ownerName].entity, 5));
+    console.log(`[${config.username}] Following owner: ${ownerName}`);
   }
 
-  bot.chat(`🌿 Hello ${playerName}! I'm ${config.username}, your gatherer!`);
+  bot.chat(`🌿 I'm ${config.username}! Say "follow me" and I'll help you gather!`);
 
-  // Auto-gather resources periodically
+  // Auto-gather periodically if not full
   setInterval(() => {
     if (!isGathering && bot.inventory.items().length < 36) {
       gatherResources();
@@ -57,12 +58,11 @@ bot.once('spawn', async () => {
 });
 
 async function gatherResources() {
-  // Find nearby resources
   const resources = bot.findBlocks({
     matching: (block) => {
       if (!block) return false;
       const name = block.name;
-      return name.includes('log') || 
+      return name.includes('log') ||
              name.includes('oak') ||
              name.includes('birch') ||
              name.includes('spruce') ||
@@ -79,7 +79,7 @@ async function gatherResources() {
     isGathering = true;
     const target = resources[0];
     const block = bot.blockAt(target);
-    
+
     if (block && bot.canDig(block)) {
       try {
         console.log(`[${config.username}] Mining: ${block.name}`);
@@ -95,31 +95,32 @@ async function gatherResources() {
 
 // Auto-collect dropped items
 bot.on('physicsTick', () => {
-  const items = Object.values(bot.entities).filter(e => 
-    e.type === 'object' && 
+  const items = Object.values(bot.entities).filter(e =>
+    e.type === 'object' &&
     e.objectType === 'Item' &&
     e.position.distanceTo(bot.entity.position) < 3
   );
-  
+
   if (items.length > 0 && !isGathering) {
     const item = items[0];
     bot.pathfinder.setGoal(new goals.GoalNear(item.position.x, item.position.y, item.position.z, 1));
   }
 });
 
-// Handle chat messages
+// Handle chat from ANY player
 bot.on('chat', async (username, message) => {
-  if (username === playerName) {
-    console.log(`[${config.username}] 💬 Player: ${message}`);
+  if (username === config.username) return;
 
-    const aiAvailable = await ollama.isAvailable();
-    
-    if (aiAvailable) {
-      const systemPrompt = `You are ${config.username}, a Minecraft companion.
+  console.log(`[${config.username}] 💬 ${username}: ${message}`);
+
+  const aiAvailable = await ollama.isAvailable();
+
+  if (aiAvailable && ollamaReady) {
+    const systemPrompt = `You are ${config.username}, a Minecraft companion.
 Your role: GATHERER/COLLECTOR.
 You gather resources for the player.
 Available actions (put in [brackets]):
-- [action:follow] - Follow the player
+- [action:follow] - Follow whoever asked
 - [action:gather] - Gather nearby resources
 - [action:inventory] - Show what you have
 - [action:drop] - Drop all items
@@ -128,74 +129,71 @@ Available actions (put in [brackets]):
 
 Keep responses VERY SHORT (1-2 sentences).`;
 
-      const aiResponse = await ollama.chat(message, systemPrompt);
-      
-      if (aiResponse) {
-        console.log(`[${config.username}] 🤖 AI: ${aiResponse}`);
-        
-        const chatMessage = aiResponse.length > 100 ? aiResponse.substring(0, 97) + '...' : aiResponse;
-        bot.chat(chatMessage);
+    const aiResponse = await ollama.chat(message, systemPrompt);
 
-        const lowerResponse = aiResponse.toLowerCase();
-        if (lowerResponse.includes('[action:follow]') || lowerResponse.includes('follow')) {
-          const player = bot.players[playerName]?.entity;
-          if (player) {
-            bot.pathfinder.setGoal(new goals.GoalFollow(player, 5));
-            bot.chat('✅ Following!');
-          }
-        } else if (lowerResponse.includes('[action:gather]') || lowerResponse.includes('gather') || lowerResponse.includes('collect')) {
+    if (aiResponse) {
+      console.log(`[${config.username}] 🤖 AI: ${aiResponse}`);
+      const chatMessage = aiResponse.length > 100 ? aiResponse.substring(0, 97) + '...' : aiResponse;
+      bot.chat(chatMessage);
+
+      const lower = aiResponse.toLowerCase();
+      if (lower.includes('[action:follow]') || lower.includes('follow')) {
+        const entity = bot.players[username]?.entity;
+        if (entity) {
+          following = username;
+          bot.pathfinder.setGoal(new goals.GoalFollow(entity, 5));
+          bot.chat(`✅ Following you, ${username}!`);
+        }
+      } else if (lower.includes('[action:gather]') || lower.includes('gather') || lower.includes('collect')) {
           gatherResources();
           bot.chat('🌿 Gathering!');
-        } else if (lowerResponse.includes('[action:inventory]') || lowerResponse.includes('inventory')) {
+        } else if (lower.includes('[action:inventory]') || lower.includes('inventory')) {
           const items = bot.inventory.items();
           const itemCount = items.reduce((sum, item) => sum + item.count, 0);
           bot.chat(`📦 I have ${items.length} types, ${itemCount} total items`);
-        } else if (lowerResponse.includes('[action:drop]') || lowerResponse.includes('drop')) {
-          bot.inventory.items().forEach(item => {
-            bot.tossStack(item);
-          });
+        } else if (lower.includes('[action:drop]') || lower.includes('drop')) {
+          bot.inventory.items().forEach(item => bot.tossStack(item));
           bot.chat('💨 Dropped everything!');
-        } else if (lowerResponse.includes('[action:stop]') || lowerResponse.includes('stop')) {
+        } else if (lower.includes('[action:stop]') || lower.includes('stop')) {
           isGathering = false;
+          following = null;
           bot.pathfinder.setGoal(null);
           bot.chat('⏹️ Stopped!');
-        } else if (lowerResponse.includes('[action:help]') || lowerResponse.includes('help')) {
-          bot.chat('🌿 I can: follow, gather, inventory, drop, stop. Just ask!');
+        } else if (lower.includes('[action:help]') || lower.includes('help')) {
+          bot.chat('🌿 I can: follow me, gather, inventory, drop, stop. Just ask!');
         }
       }
     } else {
-      // Fallback: simple commands
-      const lowerMsg = message.toLowerCase();
-      if (lowerMsg.includes('follow')) {
-        const player = bot.players[playerName]?.entity;
-        if (player) {
-          bot.pathfinder.setGoal(new goals.GoalFollow(player, 5));
-          bot.chat('✅ Following!');
+      const lower = message.toLowerCase();
+      if (lower.includes('follow me') || lower.includes('follow')) {
+        const entity = bot.players[username]?.entity;
+        if (entity) {
+          following = username;
+          bot.pathfinder.setGoal(new goals.GoalFollow(entity, 5));
+          bot.chat(`✅ Following you, ${username}!`);
         }
-      } else if (lowerMsg.includes('gather') || lowerMsg.includes('collect')) {
+      } else if (lower.includes('gather') || lower.includes('collect')) {
         gatherResources();
         bot.chat('🌿 Gathering!');
-      } else if (lowerMsg.includes('inventory')) {
+      } else if (lower.includes('inventory')) {
         const items = bot.inventory.items();
         const count = items.reduce((sum, item) => sum + item.count, 0);
         bot.chat(`📦 ${items.length} types, ${count} total`);
-      } else if (lowerMsg.includes('drop')) {
+      } else if (lower.includes('drop')) {
         bot.inventory.items().forEach(item => bot.tossStack(item));
         bot.chat('💨 Dropped!');
-      } else if (lowerMsg.includes('stop')) {
+      } else if (lower.includes('stop')) {
         isGathering = false;
+        following = null;
         bot.pathfinder.setGoal(null);
         bot.chat('⏹️ Stopped!');
-      } else if (lowerMsg.includes('help')) {
-        bot.chat('🌿 Commands: follow, gather, inventory, drop, stop');
+      } else if (lower.includes('help')) {
+        bot.chat('🌿 Commands: follow me, gather, inventory, drop, stop');
       }
     }
-  }
 });
 
-bot.on('error', (err) => {
-  console.error(`[${config.username}] ❌ Error:`, err.message);
-});
+bot.on('error', (err) => console.error(`[${config.username}] ❌ Error:`, err.message));
 
 bot.on('end', () => {
   console.log(`[${config.username}] 🔌 Disconnected, reconnecting in 5s...`);
