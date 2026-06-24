@@ -61,7 +61,7 @@ services:
       - OLLAMA_HOST=host.docker.internal
       - OLLAMA_PORT=11434
       - OLLAMA_MODEL=${OLLAMA_MODEL:-gemma4:e2b}
-      - PLAYER_NAME=Nox
+      - PLAYER_NAME=NoxGTLG
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -83,7 +83,7 @@ services:
       - OLLAMA_HOST=host.docker.internal
       - OLLAMA_PORT=11434
       - OLLAMA_MODEL=${OLLAMA_MODEL:-gemma4:e2b}
-      - PLAYER_NAME=Nox
+      - PLAYER_NAME=NoxGTLG
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
