@@ -60,6 +60,11 @@ function createBot() {
     bot.chat(`I'm ${config.username}! Say "follow me" to gather together!`);
 
     setInterval(() => {
+      // If owner joins later, start following
+      if (!following && ownerName && bot.players[ownerName]?.entity) {
+        following = ownerName;
+        console.log(`[${config.username}] Owner ${ownerName} joined, following`);
+      }
       if (!isGathering && bot.inventory.items().length < 36) {
         gatherResources(bot);
       }

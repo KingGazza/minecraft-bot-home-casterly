@@ -60,6 +60,11 @@ function createBot() {
     bot.chat(`I'm ${config.username}! Say "follow me" for protection!`);
 
     setInterval(() => {
+      // If owner joins later, start following
+      if (!following && ownerName && bot.players[ownerName]?.entity) {
+        following = ownerName;
+        console.log(`[${config.username}] Owner ${ownerName} joined, following`);
+      }
       if (following && !isFighting) {
         const target = bot.players[following]?.entity;
         if (target && target.position.distanceTo(bot.entity.position) > 6) {
