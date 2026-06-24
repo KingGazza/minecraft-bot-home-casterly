@@ -40,7 +40,7 @@ services:
       GEYSER_PORT: 19132
       REMOTE_ADDRESS: "minecraft-java"
       REMOTE_PORT: 25565
-      AUTH_TYPE: "floodgate"
+      AUTH_TYPE: "offline"
     ports:
       - "${GEYSER_PORT:-19132}:19132/udp"
     depends_on:
