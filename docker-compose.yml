@@ -26,6 +26,7 @@ services:
       - "${RCON_PORT:-25575}:25575"
     volumes:
       - ./java_data:/data
+      - ./java_data/spigot.yml:/data/spigot.yml
     restart: unless-stopped
     networks:
       - minecraft-network
