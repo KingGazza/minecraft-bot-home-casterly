@@ -57,7 +57,7 @@ function createBot() {
       console.log(`[${config.username}] Following owner: ${ownerName}`);
     }
 
-    bot.chat(`I'm ${config.username}! Say "follow me" to gather together!`);
+    bot.chat(`I'm ${config.username}! Say "follow me" and I'll help!`);
 
     // Re-follow followed player periodically
     setInterval(() => {
@@ -78,21 +78,7 @@ function createBot() {
         }
         console.log(`[${config.username}] Owner ${ownerName} joined, following`);
       }
-      if (!isGathering && bot.inventory.items().length < 36) {
-        gatherResources(bot);
-      }
     }, 10000);
-  });
-
-  bot.on('physicsTick', () => {
-    const items = Object.values(bot.entities).filter(e =>
-      e.type === 'object' && e.objectType === 'Item' &&
-      e.position.distanceTo(bot.entity.position) < 3
-    );
-    if (items.length > 0 && !isGathering) {
-      const item = items[0];
-      bot.pathfinder.setGoal(new goals.GoalNear(item.position.x, item.position.y, item.position.z, 1));
-    }
   });
 
   bot.on('chat', async (username, message) => {
@@ -106,16 +92,7 @@ function createBot() {
     const aiAvailable = await ollama.isAvailable();
 
     if (aiAvailable && ollamaReady) {
-      const systemPrompt = `You are ${config.username}, a Minecraft gatherer.
-You collect resources for players.
-Actions (put in [brackets]):
-- [action:follow] - Follow whoever asked
-- [action:gather] - Gather resources
-- [action:inventory] - Show items
-- [action:drop] - Drop all items
-- [action:stop] - Stop
-- [action:help] - Explain
-Keep responses very short (1-2 sentences).`;
+      const systemPrompt = `You are ${config.username}, a focused Minecraft helper bot for ${ownerName}.\nYour only job is to obey commands. Do NOT take initiative.\nActions (put in [brackets]):\n- [action:follow] - Follow the player\n- [action:gather] - Mine nearby resources\n- [action:inventory] - Show items\n- [action:drop] - Drop all items\n- [action:stop] - Stop following / gathering\n- [action:help] - Explain commands\nRespond in 1 short sentence. No chit-chat.`;
 
       const aiResponse = await ollama.chat(message, systemPrompt);
       if (aiResponse) {
