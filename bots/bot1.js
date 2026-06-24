@@ -28,6 +28,11 @@ const botNames = ['AI_Fighter', 'AI_Gatherer', 'Mr_Angry', 'Mr_Helpful',
   'Mr_Angry_KAT', 'Mr_Helpful_KAT',
   'Mr_Angry_NED', 'Mr_Helpful_NED'];
 
+// Global error handler to prevent crashes from mineflayer protocol issues
+process.on('uncaughtException', (err) => {
+  console.error(`[${config.username}] Uncaught: ${err.message}`);
+});
+
 function createBot() {
   const bot = mineflayer.createBot(config);
   bot.loadPlugin(pathfinder);
@@ -145,10 +150,10 @@ Keep responses very short (1-2 sentences).`;
   bot.on('error', (err) => console.error(`[${config.username}] Error:`, err.message));
 
   bot.on('end', () => {
-    console.log(`[${config.username}] Disconnected, reconnecting in 10s...`);
+    console.log(`[${config.username}] Disconnected, reconnecting in 20s...`);
     setTimeout(() => {
-      createBot(); // Create a fresh bot instance instead of calling bot.connect()
-    }, 10000);
+      createBot();
+    }, 20000);
   });
 
   bot.on('kicked', (reason) => {
