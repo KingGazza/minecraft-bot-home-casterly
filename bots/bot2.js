@@ -305,6 +305,13 @@ async function gatherResources(bot, resourceType, targetQty = 64) {
   if (finalCount > 0) {
     bot.chat(`Done! Have ${finalCount} ${typeFilter || 'total items'}.`);
   }
+
+  // Go find the owner
+  if (ownerName && bot.players[ownerName]?.entity) {
+    following = ownerName;
+    bot.pathfinder.setGoal(new goals.GoalFollow(bot.players[ownerName].entity, 5));
+    bot.chat(`Coming back to you, ${ownerName}!`);
+  }
 }
 
 console.log(`[${config.username}] Starting...`);
