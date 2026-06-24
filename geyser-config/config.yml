@@ -1,0 +1,10 @@
+bedrock:
+  address: 0.0.0.0
+  port: 19132
+
+java:
+  address: minecraft-java
+  port: 25565
+  auth-type: offline
+
+enable-proxy-connections: false

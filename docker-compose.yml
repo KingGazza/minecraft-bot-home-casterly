@@ -35,14 +35,10 @@ services:
   geyser:
     image: bmoorman/geyser:latest
     container_name: geyser
-    environment:
-      GEYSER_ADDRESS: "0.0.0.0"
-      GEYSER_PORT: 19132
-      REMOTE_ADDRESS: "minecraft-java"
-      REMOTE_PORT: 25565
-      AUTH_TYPE: "offline"
     ports:
       - "${GEYSER_PORT:-19132}:19132/udp"
+    volumes:
+      - ./geyser-config/config.yml:/var/lib/geyser/config.yml
     depends_on:
       - minecraft-java
     restart: unless-stopped
