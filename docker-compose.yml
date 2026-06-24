@@ -74,8 +74,6 @@ services:
     restart: unless-stopped
     networks:
       - minecraft-network
-    volumes:
-      - ./bots:/app
     command: node /app/bot1.js
 
   # ============================================
@@ -103,8 +101,6 @@ services:
     restart: unless-stopped
     networks:
       - minecraft-network
-    volumes:
-      - ./bots:/app
     command: node /app/bot2.js
 
 # ============================================

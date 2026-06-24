@@ -1,10 +1,14 @@
 FROM node:18-slim
 
-# Install dependencies to /deps so the ./bots:/app volume mount doesn't mask them
+# Install dependencies to /deps (separate from /app so volume mounts don't mask)
 WORKDIR /deps
 COPY package*.json ./
 RUN npm install && npm cache clean --force
 ENV NODE_PATH=/deps/node_modules
 
+# Copy bot source code into the image
 WORKDIR /app
+COPY . /app/
+
+# CMD overridden by docker-compose command per service
 CMD ["node", "/app/bot1.js"]
