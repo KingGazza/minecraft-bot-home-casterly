@@ -108,7 +108,7 @@ services:
       - OLLAMA_HOST=host.docker.internal
       - OLLAMA_PORT=11434
       - OLLAMA_MODEL=${OLLAMA_MODEL:-gemma4:e2b}
-      - PLAYER_NAME=KAT
+      - PLAYER_NAME=celg5130
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -130,7 +130,7 @@ services:
       - OLLAMA_HOST=host.docker.internal
       - OLLAMA_PORT=11434
       - OLLAMA_MODEL=${OLLAMA_MODEL:-gemma4:e2b}
-      - PLAYER_NAME=KAT
+      - PLAYER_NAME=celg5130
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -143,13 +143,13 @@ services:
   # ============================================
   # gelg3275's bots
   # ============================================
-  fighter-gelg3275:
+  fighter-ned:
     build:
       context: ./bots
       dockerfile: Dockerfile.bot
-    container_name: fighter_gelg3275
+    container_name: fighter_ned
     environment:
-      - BOT_NAME=Mr_Angry_gelg3275
+      - BOT_NAME=Mr_Angry_NED
       - MC_HOST=minecraft-java
       - MC_PORT=25565
       - OLLAMA_HOST=host.docker.internal
@@ -165,13 +165,13 @@ services:
       - minecraft-network
     command: node /app/bot1.js
 
-  gatherer-gelg3275:
+  gatherer-ned:
     build:
       context: ./bots
       dockerfile: Dockerfile.bot
-    container_name: gatherer_gelg3275
+    container_name: gatherer_ned
     environment:
-      - BOT_NAME=Mr_Helpful_gelg3275
+      - BOT_NAME=Mr_Helpful_NED
       - MC_HOST=minecraft-java
       - MC_PORT=25565
       - OLLAMA_HOST=host.docker.internal

@@ -26,7 +26,7 @@ let ollamaReady = false;
 const botNames = ['AI_Fighter', 'AI_Gatherer', 'Mr_Angry', 'Mr_Helpful',
   'Mr_Angry_Nox', 'Mr_Helpful_Nox',
   'Mr_Angry_KAT', 'Mr_Helpful_KAT',
-  'Mr_Angry_gelg3275', 'Mr_Helpful_gelg3275'];
+  'Mr_Angry_NED', 'Mr_Helpful_NED'];
 
 // Global error handler to prevent crashes from mineflayer protocol issues
 process.on('uncaughtException', (err) => {
