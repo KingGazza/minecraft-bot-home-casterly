@@ -21,8 +21,8 @@ const ownerName = process.env.PLAYER_NAME || '';
 let following = null;
 let ollamaReady = false;
 let isGathering = false;
-let gatherTarget = null; // null = any resource, or specific type like 'oak', 'iron_ore'
-let lastActivity = Date.now(); // track activity for idle auto-gather
+let gatherTarget = null;
+let gatherQuantity = 64; // default target per command
 let mcData;
 
 const botNames = ['AI_Fighter', 'AI_Gatherer', 'Mr_Angry', 'Mr_Helpful',
@@ -30,7 +30,6 @@ const botNames = ['AI_Fighter', 'AI_Gatherer', 'Mr_Angry', 'Mr_Helpful',
   'Mr_Angry_KAT', 'Mr_Helpful_KAT',
   'Mr_Angry_NED', 'Mr_Helpful_NED'];
 
-// Global error handler
 process.on('uncaughtException', (err) => {
   console.error(`[${config.username}] Uncaught: ${err.message}`);
 });
@@ -59,60 +58,43 @@ function createBot() {
       console.log(`[${config.username}] Following owner: ${ownerName}`);
     }
 
-    bot.chat(`I'm ${config.username}! Say "follow me" and I'll help!`);
+    bot.chat(`I'm ${config.username}! Say "gather 64 oak" and I'll work!`);
 
-    // Re-follow followed player periodically
     setInterval(() => {
       if (following && !isGathering) {
         const target = bot.players[following]?.entity;
         if (target && target.position.distanceTo(bot.entity.position) > 6) {
           bot.pathfinder.setGoal(new goals.GoalFollow(target, 5));
-          lastActivity = Date.now();
         }
       }
     }, 3000);
 
     setInterval(() => {
-      // If owner joins later, start following
       if (!following && ownerName && bot.players[ownerName]?.entity) {
         following = ownerName;
         if (bot.players[ownerName]?.entity) {
           bot.pathfinder.setGoal(new goals.GoalFollow(bot.players[ownerName].entity, 5));
         }
         console.log(`[${config.username}] Owner ${ownerName} joined, following`);
-        lastActivity = Date.now();
       }
     }, 10000);
-
-    // Auto-gather when idle for 60+ seconds (owner offline, no commands)
-    setInterval(() => {
-      const idleTime = Date.now() - lastActivity;
-      if (!following && !isGathering && idleTime > 60000) {
-        console.log(`[${config.username}] Idle ${Math.round(idleTime/1000)}s, auto-gathering...`);
-        gatherResources(bot, null);
-        lastActivity = Date.now();
-      }
-    }, 15000);
   });
 
   bot.on('chat', async (username, message) => {
     if (username === config.username) return;
 
-    // Another bot talking — only respond if they mention my name
     if (botNames.includes(username)) {
       if (!message.toLowerCase().includes(config.username.toLowerCase())) return;
     } else {
-      // For players, only respond to owner
       if (username !== ownerName) return;
     }
 
     console.log(`[${config.username}] 💬 ${username}: ${message}`);
-    lastActivity = Date.now(); // any chat = not idle
 
     const aiAvailable = await ollama.isAvailable();
 
     if (aiAvailable && ollamaReady) {
-      const systemPrompt = `You are ${config.username}, a focused Minecraft helper bot for ${ownerName}.\nYour only job is to obey commands. Do NOT take initiative.\nActions (put in [brackets]):\n- [action:follow] - Follow the player\n- [action:gather:resource] - Mine a specific resource (e.g. [action:gather:oak_log], [action:gather:iron_ore], [action:gather:stone], [action:gather:diamond_ore])\n- [action:inventory] - Show items\n- [action:drop] - Drop all items\n- [action:stop] - Stop following / gathering\n- [action:help] - Explain commands\nRespond in 1 short sentence. No chit-chat.`;
+      const systemPrompt = `You are ${config.username}, a focused Minecraft helper bot for ${ownerName}.\nYour only job is to obey commands. Do NOT take initiative.\nActions (put in [brackets]):\n- [action:follow] - Follow the player\n- [action:gather:resource:quantity] - Mine a specific resource (e.g. [action:gather:oak_log:64], [action:gather:iron_ore:32], [action:gather:stone:64])\n- [action:inventory] - Show items\n- [action:drop] - Drop all items\n- [action:stop] - Stop following / gathering\n- [action:help] - Explain commands\nRespond in 1 short sentence. No chit-chat.`;
 
       const aiResponse = await ollama.chat(message, systemPrompt);
       if (aiResponse) {
@@ -124,16 +106,18 @@ function createBot() {
           const entity = bot.players[username]?.entity;
           if (entity) { following = username; bot.pathfinder.setGoal(new goals.GoalFollow(entity, 5)); bot.chat(`Following you, ${username}!`); }
         } else if (lower.includes('[action:gather:') || lower.includes('[action:gather]') || lower.includes('gather') || lower.includes('collect')) {
-          // Extract specific resource from [action:gather:resource_name]
           const gatherMatch = aiResponse.match(/\[action:gather:([^\]]+)\]/i);
           if (gatherMatch) {
-            gatherTarget = gatherMatch[1].toLowerCase().replace(/_/g, ' ');
-            bot.chat(`Gathering ${gatherTarget}!`);
+            const parts = gatherMatch[1].split(':');
+            gatherTarget = parts[0].toLowerCase().replace(/_/g, ' ');
+            gatherQuantity = parseInt(parts[1]) || 64;
+            bot.chat(`Gathering ${gatherQuantity} ${gatherTarget}!`);
           } else {
-            gatherTarget = null; // any resource
+            gatherTarget = null;
+            gatherQuantity = 64;
             bot.chat('Gathering!');
           }
-          gatherResources(bot, gatherTarget);
+          gatherResources(bot, gatherTarget, gatherQuantity);
         } else if (lower.includes('[action:inventory]') || lower.includes('inventory')) {
           const items = bot.inventory.items();
           const c = items.reduce((s, i) => s + i.count, 0);
@@ -144,28 +128,37 @@ function createBot() {
         } else if (lower.includes('[action:stop]')) {
           isGathering = false; following = null; bot.pathfinder.setGoal(null); bot.chat('Stopped!');
         } else if (lower.includes('[action:help]') || lower.includes('help')) {
-          bot.chat('Commands: follow me, gather, inventory, drop, stop');
+          bot.chat('Commands: gather [qty] [resource], follow, inventory, drop, stop');
         }
-        return; // AI handled it, skip rule-based fallback
+        return;
       }
-      // AI returned null (timeout/error) — fall through to rule-based
     }
 
-    // Rule-based fallback (no AI, or AI timed out)
+    // Rule-based fallback
     const lower = message.toLowerCase();
     if (lower.includes('follow me') || (lower.includes('follow') && !lower.includes('stop'))) {
       const entity = bot.players[username]?.entity;
       if (entity) { following = username; bot.pathfinder.setGoal(new goals.GoalFollow(entity, 5)); bot.chat(`Following you, ${username}!`); }
     } else if (lower.includes('gather') || lower.includes('collect')) {
-      const resourceMatch = message.match(/(?:gather|collect)\s+(.+)/i);
-      if (resourceMatch) {
-        gatherTarget = resourceMatch[1].toLowerCase().trim();
-        bot.chat(`Gathering ${gatherTarget}!`);
+      // Parse: "gather 64 oak" or "gather oak" or "gather 32 iron ore"
+      const qtyMatch = message.match(/(?:gather|collect)\s+(\d+)\s+(.+)/i);
+      if (qtyMatch) {
+        gatherQuantity = parseInt(qtyMatch[1]);
+        gatherTarget = qtyMatch[2].toLowerCase().trim();
+        bot.chat(`Gathering ${gatherQuantity} ${gatherTarget}!`);
       } else {
-        gatherTarget = null;
-        bot.chat('Gathering!');
+        const nameMatch = message.match(/(?:gather|collect)\s+(.+)/i);
+        if (nameMatch) {
+          gatherTarget = nameMatch[1].toLowerCase().trim();
+          gatherQuantity = 64;
+          bot.chat(`Gathering ${gatherTarget}!`);
+        } else {
+          gatherTarget = null;
+          gatherQuantity = 64;
+          bot.chat('Gathering!');
+        }
       }
-      gatherResources(bot, gatherTarget);
+      gatherResources(bot, gatherTarget, gatherQuantity);
     } else if (lower.includes('inventory')) {
       const items = bot.inventory.items();
       const c = items.reduce((s, i) => s + i.count, 0);
@@ -176,7 +169,7 @@ function createBot() {
     } else if (lower.includes('stop')) {
       isGathering = false; following = null; bot.pathfinder.setGoal(null); bot.chat('Stopped!');
     } else if (lower.includes('help')) {
-      bot.chat('Commands: follow me, gather, inventory, drop, stop');
+      bot.chat('Commands: gather [qty] [resource], follow, inventory, drop, stop');
     }
   });
 
@@ -193,70 +186,125 @@ function createBot() {
   });
 }
 
-async function gatherResources(bot, resourceType) {
+async function gatherResources(bot, resourceType, targetQty = 64) {
   const typeFilter = resourceType ? resourceType.toLowerCase() : null;
-
-  const resources = bot.findBlocks({
-    matching: (block) => {
-      if (!block) return false;
-      const name = block.name.toLowerCase();
-
-      if (typeFilter) {
-        return name.includes(typeFilter);
-      }
-
-      return name.includes('log') || name.includes('oak') || name.includes('birch') ||
-             name.includes('spruce') || name.includes('stone') || name.includes('dirt') ||
-             name.includes('coal_ore') || name.includes('iron_ore');
-    },
-    maxDistance: 25,
-    count: 5
-  });
-
-  if (resources.length === 0) {
-    bot.chat("Can't find any nearby!");
-    return;
-  }
 
   if (isGathering) return;
   isGathering = true;
 
-  // Walk to and mine up to 3 blocks
-  const limit = Math.min(resources.length, 3);
-  for (let i = 0; i < limit; i++) {
-    const target = resources[i];
-    const block = bot.blockAt(target);
-    if (!block || !bot.canDigBlock(block)) continue;
+  let totalMined = 0;
 
-    try {
-      // Walk within reach if too far
-      const dist = bot.entity.position.distanceTo(target);
-      if (dist > 4) {
-        bot.pathfinder.setGoal(new goals.GoalNear(target.x, target.y, target.z, 3));
-        await new Promise(resolve => {
-          const check = setInterval(() => {
-            if (bot.entity.position.distanceTo(target) < 4 || !bot.pathfinder.isMoving()) {
-              clearInterval(check);
-              resolve();
-            }
-          }, 500);
-          setTimeout(() => { clearInterval(check); resolve(); }, 8000);
-        });
+  while (totalMined < targetQty) {
+    // Check current count in inventory
+    let currentCount = 0;
+    if (typeFilter) {
+      const items = bot.inventory.items();
+      for (const item of items) {
+        if (item.name.toLowerCase().includes(typeFilter)) {
+          currentCount += item.count;
+        }
       }
-
-      console.log(`[${config.username}] Mining: ${block.name}`);
-      await bot.dig(block);
-      console.log(`[${config.username}] Mined: ${block.name}`);
-    } catch (err) {
-      console.log(`[${config.username}] Can't mine: ${err.message}`);
+    } else {
+      currentCount = bot.inventory.items().reduce((s, i) => s + i.count, 0);
     }
 
-    // Brief pause between digs
-    await new Promise(r => setTimeout(r, 500));
+    if (currentCount >= targetQty) {
+      bot.chat(`Got ${currentCount} ${typeFilter || 'resources'}! That's your ${targetQty}!`);
+      break;
+    }
+
+    // Find blocks to mine
+    const resources = bot.findBlocks({
+      matching: (block) => {
+        if (!block) return false;
+        const name = block.name.toLowerCase();
+        if (typeFilter) return name.includes(typeFilter);
+        return name.includes('log') || name.includes('oak') || name.includes('birch') ||
+               name.includes('spruce') || name.includes('stone') || name.includes('dirt') ||
+               name.includes('coal_ore') || name.includes('iron_ore');
+      },
+      maxDistance: 25,
+      count: 5
+    });
+
+    if (resources.length === 0) {
+      // Try moving a bit and re-scanning
+      const nearby = bot.findBlocks({ matching: () => true, maxDistance: 3, count: 1 });
+      if (nearby.length > 0) {
+        const wanderTarget = nearby[0];
+        bot.pathfinder.setGoal(new goals.GoalNear(
+          wanderTarget.x + Math.floor(Math.random() * 10) - 5,
+          wanderTarget.y,
+          wanderTarget.z + Math.floor(Math.random() * 10) - 5,
+          2
+        ));
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        continue;
+      }
+      bot.chat(`Got ${currentCount} ${typeFilter || 'resources'} — can't find more nearby.`);
+      break;
+    }
+
+    // Mine blocks we found
+    let minedThisBatch = false;
+    for (const target of resources) {
+      if (!isGathering) break; // stop command was issued
+      if (currentCount >= targetQty) break;
+
+      const block = bot.blockAt(target);
+      if (!block || !bot.canDigBlock(block)) continue;
+
+      try {
+        const dist = bot.entity.position.distanceTo(target);
+        if (dist > 4) {
+          bot.pathfinder.setGoal(new goals.GoalNear(target.x, target.y, target.z, 3));
+          await new Promise(resolve => {
+            const check = setInterval(() => {
+              if (bot.entity.position.distanceTo(target) < 4 || !bot.pathfinder.isMoving()) {
+                clearInterval(check);
+                resolve();
+              }
+            }, 500);
+            setTimeout(() => { clearInterval(check); resolve(); }, 8000);
+          });
+        }
+
+        console.log(`[${config.username}] Mining: ${block.name}`);
+        await bot.dig(block);
+        totalMined++;
+        minedThisBatch = true;
+        console.log(`[${config.username}] Mined: ${block.name}`);
+
+        // Update count after dig
+        if (typeFilter) {
+          const items = bot.inventory.items();
+          currentCount = items.filter(i => i.name.toLowerCase().includes(typeFilter))
+                              .reduce((s, i) => s + i.count, 0);
+        } else {
+          currentCount = bot.inventory.items().reduce((s, i) => s + i.count, 0);
+        }
+      } catch (err) {
+        console.log(`[${config.username}] Can't mine: ${err.message}`);
+      }
+
+      await new Promise(r => setTimeout(r, 300));
+    }
+
+    if (!minedThisBatch) {
+      bot.chat(`Stuck — got ${currentCount} so far. Need more reachable blocks.`);
+      break;
+    }
   }
 
   isGathering = false;
-  bot.chat('Done gathering!');
+  const finalCount = typeFilter
+    ? bot.inventory.items().filter(i => i.name.toLowerCase().includes(typeFilter))
+                           .reduce((s, i) => s + i.count, 0)
+    : bot.inventory.items().reduce((s, i) => s + i.count, 0);
+
+  if (finalCount > 0) {
+    bot.chat(`Done! Have ${finalCount} ${typeFilter || 'total items'}.`);
+  }
 }
 
 console.log(`[${config.username}] Starting...`);
