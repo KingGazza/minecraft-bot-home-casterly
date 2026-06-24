@@ -75,6 +75,8 @@ function createBot() {
   bot.on('chat', async (username, message) => {
     if (username === config.username) return;
     if (botNames.includes(username)) return;
+    // Only respond to assigned player
+    if (username !== ownerName) return;
 
     console.log(`[${config.username}] 💬 ${username}: ${message}`);
 
