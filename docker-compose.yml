@@ -108,7 +108,7 @@ services:
       - OLLAMA_HOST=host.docker.internal
       - OLLAMA_PORT=11434
       - OLLAMA_MODEL=${OLLAMA_MODEL:-gemma4:e2b}
-      - PLAYER_NAME=celg5130
+      - PLAYER_NAME=CELG5130
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -130,7 +130,7 @@ services:
       - OLLAMA_HOST=host.docker.internal
       - OLLAMA_PORT=11434
       - OLLAMA_MODEL=${OLLAMA_MODEL:-gemma4:e2b}
-      - PLAYER_NAME=celg5130
+      - PLAYER_NAME=CELG5130
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -155,7 +155,7 @@ services:
       - OLLAMA_HOST=host.docker.internal
       - OLLAMA_PORT=11434
       - OLLAMA_MODEL=${OLLAMA_MODEL:-gemma4:e2b}
-      - PLAYER_NAME=gelg3275
+      - PLAYER_NAME=GELG3275
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
@@ -177,7 +177,7 @@ services:
       - OLLAMA_HOST=host.docker.internal
       - OLLAMA_PORT=11434
       - OLLAMA_MODEL=${OLLAMA_MODEL:-gemma4:e2b}
-      - PLAYER_NAME=gelg3275
+      - PLAYER_NAME=GELG3275
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
