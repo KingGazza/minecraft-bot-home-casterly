@@ -187,7 +187,7 @@ Keep responses very short (1-2 sentences).`;
       following = null; bot.pathfinder.setGoal(null); bot.chat('Guarding!');
     } else if (lower.includes('stop')) {
       following = null; bot.pathfinder.setGoal(null); isFighting = false; bot.chat('Stopped!');
-    } else if (lower.includes('help')) {
+    } else if (lower === 'help') {
       bot.chat('Commands: follow me, attack, guard, drop, stop');
     } else if (lower === 'drop' || lower === 'drop all' || lower === 'drop everything') {
       bot.inventory.items().forEach(i => bot.tossStack(i));
