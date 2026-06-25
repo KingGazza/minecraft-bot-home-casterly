@@ -75,6 +75,15 @@ function createBot() {
         }
       }
     }, 3000);
+
+    // Emergency surface if drowning
+    setInterval(() => {
+      if (bot.entity && bot.entity.air !== undefined && bot.entity.air < 100) {
+        const pos = bot.entity.position;
+        bot.pathfinder.setGoal(new goals.GoalNear(pos.x, pos.y + 10, pos.z, 2));
+        console.log(`[${config.username}] Help! Drowning!`);
+      }
+    }, 2000);
   });
 
   bot.on('physicsTick', () => {
@@ -138,7 +147,27 @@ Keep responses very short (1-2 sentences).`;
         } else if (lower.includes('[action:stop]')) {
           following = null; bot.pathfinder.setGoal(null); isFighting = false; bot.chat('Stopped!');
         } else if (lower.includes('[action:help]') || lower.includes('help')) {
-          bot.chat('Commands: follow me, attack, guard, stop');
+          bot.chat('Commands: follow me, attack, guard, drop, stop');
+        } else if (lower.includes('[action:inventory]') || lower.includes('inventory')) {
+          const items = bot.inventory.items();
+          const c = items.reduce((s, i) => s + i.count, 0);
+          bot.chat(`Inventory: ${items.length} types, ${c} total`);
+        } else if (lower.includes('[action:drop:') || lower.includes('[action:drop]') || lower.includes('drop')) {
+          const dropMatch = aiResponse.match(/\[action:drop:([^\]]+)\]/i);
+          if (dropMatch) {
+            const dropType = dropMatch[1].toLowerCase().replace(/_/g, ' ');
+            let dropped = 0;
+            for (const item of bot.inventory.items()) {
+              if (item.name.toLowerCase().includes(dropType)) {
+                bot.tossStack(item);
+                dropped += item.count;
+              }
+            }
+            bot.chat(`Dropped ${dropped} ${dropType}!`);
+          } else {
+            bot.inventory.items().forEach(i => bot.tossStack(i));
+            bot.chat('Dropped everything!');
+          }
         }
         return; // AI handled it, skip rule-based fallback
       }
@@ -159,7 +188,27 @@ Keep responses very short (1-2 sentences).`;
     } else if (lower.includes('stop')) {
       following = null; bot.pathfinder.setGoal(null); isFighting = false; bot.chat('Stopped!');
     } else if (lower.includes('help')) {
-      bot.chat('Commands: follow me, attack, guard, stop');
+      bot.chat('Commands: follow me, attack, guard, drop, stop');
+    } else if (lower === 'drop' || lower === 'drop all' || lower === 'drop everything') {
+      bot.inventory.items().forEach(i => bot.tossStack(i));
+      bot.chat('Dropped everything!');
+    } else if (lower.startsWith('drop ')) {
+      const dropType = message.match(/^drop\s+(.+)/i);
+      if (dropType) {
+        const target = dropType[1].toLowerCase().trim();
+        let dropped = 0;
+        for (const item of bot.inventory.items()) {
+          if (item.name.toLowerCase().includes(target)) {
+            bot.tossStack(item);
+            dropped += item.count;
+          }
+        }
+        bot.chat(`Dropped ${dropped} ${target}!`);
+      }
+    } else if (lower.includes('inventory')) {
+      const items = bot.inventory.items();
+      const c = items.reduce((s, i) => s + i.count, 0);
+      bot.chat(`Inventory: ${items.length} types, ${c} total`);
     }
   });
 

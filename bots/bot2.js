@@ -78,6 +78,15 @@ function createBot() {
         console.log(`[${config.username}] Owner ${ownerName} joined, following`);
       }
     }, 10000);
+
+    // Emergency surface if drowning
+    setInterval(() => {
+      if (bot.entity && bot.entity.air !== undefined && bot.entity.air < 100) {
+        const pos = bot.entity.position;
+        bot.pathfinder.setGoal(new goals.GoalNear(pos.x, pos.y + 10, pos.z, 2));
+        bot.chat('Help! Drowning!');
+      }
+    }, 2000);
   });
 
   bot.on('chat', async (username, message) => {
@@ -94,7 +103,7 @@ function createBot() {
     const aiAvailable = await ollama.isAvailable();
 
     if (aiAvailable && ollamaReady) {
-      const systemPrompt = `You are ${config.username}, a focused Minecraft helper bot for ${ownerName}.\nYour only job is to obey commands. Do NOT take initiative.\nActions (put in [brackets]):\n- [action:follow] - Follow the player\n- [action:gather:resource:quantity] - Mine a specific resource (e.g. [action:gather:oak_log:64], [action:gather:iron_ore:32], [action:gather:stone:64])\n- [action:inventory] - Show items\n- [action:drop] - Drop all items\n- [action:stop] - Stop following / gathering\n- [action:help] - Explain commands\nRespond in 1 short sentence. No chit-chat.`;
+      const systemPrompt = `You are ${config.username}, a focused Minecraft helper bot for ${ownerName}.\nYour only job is to obey commands. Do NOT take initiative.\nActions (put in [brackets]):\n- [action:follow] - Follow the player\n- [action:gather:resource:quantity] - Mine a specific resource (e.g. [action:gather:oak_log:64], [action:gather:iron_ore:32], [action:gather:stone:64])\n- [action:inventory] - Show items\n- [action:drop] - Drop all items\n- [action:drop:resource] - Drop specific items (e.g. [action:drop:dirt], [action:drop:oak_log])\n- [action:stop] - Stop following / gathering\n- [action:help] - Explain commands\nRespond in 1 short sentence. No chit-chat.`;
 
       const aiResponse = await ollama.chat(message, systemPrompt);
       if (aiResponse) {
@@ -122,9 +131,23 @@ function createBot() {
           const items = bot.inventory.items();
           const c = items.reduce((s, i) => s + i.count, 0);
           bot.chat(`Inventory: ${items.length} types, ${c} total`);
-        } else if (lower.includes('[action:drop]') || lower.includes('drop')) {
-          bot.inventory.items().forEach(i => bot.tossStack(i));
-          bot.chat('Dropped everything!');
+        } else if (lower.includes('[action:drop:') || lower.includes('[action:drop]') || lower.includes('drop')) {
+          // Check for specific drop target
+          const dropMatch = aiResponse.match(/\[action:drop:([^\]]+)\]/i);
+          if (dropMatch) {
+            const dropType = dropMatch[1].toLowerCase().replace(/_/g, ' ');
+            let dropped = 0;
+            for (const item of bot.inventory.items()) {
+              if (item.name.toLowerCase().includes(dropType)) {
+                bot.tossStack(item);
+                dropped += item.count;
+              }
+            }
+            bot.chat(`Dropped ${dropped} ${dropType}!`);
+          } else {
+            bot.inventory.items().forEach(i => bot.tossStack(i));
+            bot.chat('Dropped everything!');
+          }
         } else if (lower.includes('[action:stop]')) {
           isGathering = false; following = null; bot.pathfinder.setGoal(null); bot.chat('Stopped!');
         } else if (lower.includes('[action:help]') || lower.includes('help')) {
@@ -163,9 +186,22 @@ function createBot() {
       const items = bot.inventory.items();
       const c = items.reduce((s, i) => s + i.count, 0);
       bot.chat(`Inventory: ${items.length} types, ${c} total`);
-    } else if (lower.includes('drop')) {
+    } else if (lower === 'drop' || lower === 'drop all' || lower === 'drop everything') {
       bot.inventory.items().forEach(i => bot.tossStack(i));
-      bot.chat('Dropped!');
+      bot.chat('Dropped everything!');
+    } else if (lower.startsWith('drop ')) {
+      const dropType = message.match(/^drop\s+(.+)/i);
+      if (dropType) {
+        const target = dropType[1].toLowerCase().trim();
+        let dropped = 0;
+        for (const item of bot.inventory.items()) {
+          if (item.name.toLowerCase().includes(target)) {
+            bot.tossStack(item);
+            dropped += item.count;
+          }
+        }
+        bot.chat(`Dropped ${dropped} ${target}!`);
+      }
     } else if (lower.includes('stop')) {
       isGathering = false; following = null; bot.pathfinder.setGoal(null); bot.chat('Stopped!');
     } else if (lower.includes('help')) {
