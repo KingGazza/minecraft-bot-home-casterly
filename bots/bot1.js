@@ -84,6 +84,18 @@ function createBot() {
         console.log(`[${config.username}] Help! Drowning!`);
       }
     }, 2000);
+
+    // Auto-heal: eat food when low
+    setInterval(() => {
+      const food = bot.inventory.items().find(i => i.foodPoints && i.foodPoints > 0);
+      if (food && (bot.health < 10 || bot.food < 10)) {
+        try {
+          bot.equip(food, 'hand');
+          bot.consume();
+          console.log(`[${config.username}] 🍗 Ate ${food.name} (HP:${bot.health} Food:${bot.food})`);
+        } catch (e) {}
+      }
+    }, 5000);
   });
 
   bot.on('physicsTick', () => {
@@ -183,6 +195,13 @@ Keep responses very short (1-2 sentences).`;
       const mob = bot.nearestEntity((e) => e.type === 'mob');
       if (mob) { isFighting = true; bot.attack(mob); setTimeout(() => { isFighting = false; }, 1000); bot.chat('Attacking!'); }
       else { bot.chat('No mobs nearby!'); }
+    } else if (lower === 'tp' || lower === 'teleport') {
+      bot.chat(`/tp ${ownerName}`);
+      bot.chat('Teleporting!');
+    } else if (lower.startsWith('deposit') || lower.startsWith('store')) {
+      const depType = message.match(/^(?:deposit|store)\s+(.+)/i);
+      const filter = depType ? depType[1].toLowerCase().trim() : null;
+      depositToChest(bot, filter);
     } else if (lower.includes('guard') || lower.includes('stay')) {
       following = null; bot.pathfinder.setGoal(null); bot.chat('Guarding!');
     } else if (lower.includes('stop')) {
@@ -275,6 +294,30 @@ function equipBestGear(bot) {
   const hasAnyArmor = items.some(i => Object.keys(armorMap).some(t => i.name.includes(t)));
   if (!hasAnyArmor) {
     console.log(`[${config.username}] ⚠️ No armor found — need gear to survive!`);
+  }
+}
+
+async function depositToChest(bot, typeFilter) {
+  const chestBlock = bot.findBlock({
+    matching: (block) => block.name.includes('chest'),
+    maxDistance: 5
+  });
+  if (!chestBlock) {
+    bot.chat("Can't find a chest nearby!");
+    return;
+  }
+  try {
+    const chest = await bot.openChest(chestBlock);
+    let deposited = 0;
+    for (const item of bot.inventory.items()) {
+      if (typeFilter && !item.name.toLowerCase().includes(typeFilter)) continue;
+      await chest.deposit(item.type, null, item.count);
+      deposited += item.count;
+    }
+    chest.close();
+    bot.chat(`Deposited ${deposited} items into chest!`);
+  } catch (err) {
+    bot.chat(`Can't open chest: ${err.message}`);
   }
 }
 

@@ -87,6 +87,18 @@ function createBot() {
         bot.chat('Help! Drowning!');
       }
     }, 2000);
+
+    // Auto-heal: eat food when low
+    setInterval(() => {
+      const food = bot.inventory.items().find(i => i.foodPoints && i.foodPoints > 0);
+      if (food && (bot.health < 10 || bot.food < 10)) {
+        try {
+          bot.equip(food, 'hand');
+          bot.consume();
+          console.log(`[${config.username}] 🍗 Ate ${food.name} (HP:${bot.health} Food:${bot.food})`);
+        } catch (e) {}
+      }
+    }, 5000);
   });
 
   bot.on('chat', async (username, message) => {
@@ -162,8 +174,10 @@ function createBot() {
     if (lower.includes('follow me') || lower === 'come' || lower === 'come here' || (lower.includes('follow') && !lower.includes('stop'))) {
       const entity = bot.players[username]?.entity;
       if (entity) { following = username; bot.pathfinder.setGoal(new goals.GoalFollow(entity, 5)); bot.chat(`Following you, ${username}!`); }
+    } else if (lower === 'tp' || lower === 'teleport') {
+      bot.chat(`/tp ${ownerName}`);
+      bot.chat('Teleporting!');
     } else if (lower.includes('gather') || lower.includes('collect')) {
-      // Parse: "gather 64 oak" or "gather oak" or "gather 32 iron ore"
       const qtyMatch = message.match(/(?:gather|collect)\s+(\d+)\s+(.+)/i);
       if (qtyMatch) {
         gatherQuantity = parseInt(qtyMatch[1]);
@@ -182,6 +196,10 @@ function createBot() {
         }
       }
       gatherResources(bot, gatherTarget, gatherQuantity);
+    } else if (lower.startsWith('deposit') || lower.startsWith('store')) {
+      const depType = message.match(/^(?:deposit|store)\s+(.+)/i);
+      const filter = depType ? depType[1].toLowerCase().trim() : null;
+      depositToChest(bot, filter);
     } else if (lower.includes('inventory')) {
       const items = bot.inventory.items();
       const c = items.reduce((s, i) => s + i.count, 0);
@@ -365,6 +383,30 @@ async function gatherResources(bot, resourceType, targetQty = 64) {
     following = ownerName;
     bot.pathfinder.setGoal(new goals.GoalFollow(bot.players[ownerName].entity, 5));
     bot.chat(`Coming back to you, ${ownerName}!`);
+  }
+}
+
+async function depositToChest(bot, typeFilter) {
+  const chestBlock = bot.findBlock({
+    matching: (block) => block.name.includes('chest'),
+    maxDistance: 5
+  });
+  if (!chestBlock) {
+    bot.chat("Can't find a chest nearby!");
+    return;
+  }
+  try {
+    const chest = await bot.openChest(chestBlock);
+    let deposited = 0;
+    for (const item of bot.inventory.items()) {
+      if (typeFilter && !item.name.toLowerCase().includes(typeFilter)) continue;
+      await chest.deposit(item.type, null, item.count);
+      deposited += item.count;
+    }
+    chest.close();
+    bot.chat(`Deposited ${deposited} items into chest!`);
+  } catch (err) {
+    bot.chat(`Can't open chest: ${err.message}`);
   }
 }
 
