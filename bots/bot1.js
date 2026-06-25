@@ -176,7 +176,7 @@ Keep responses very short (1-2 sentences).`;
 
     // Rule-based fallback (no AI, or AI timed out)
     const lower = message.toLowerCase();
-    if (lower.includes('follow me') || (lower.includes('follow') && !lower.includes('stop'))) {
+    if (lower.includes('follow me') || lower === 'come' || lower === 'come here' || (lower.includes('follow') && !lower.includes('stop'))) {
       const entity = bot.players[username]?.entity;
       if (entity) { following = username; bot.pathfinder.setGoal(new goals.GoalFollow(entity, 3)); bot.chat(`Following you, ${username}!`); }
     } else if (lower.includes('attack') || lower.includes('fight')) {
@@ -226,6 +226,21 @@ Keep responses very short (1-2 sentences).`;
   bot.on('kicked', (reason) => {
     const msg = typeof reason === 'string' ? reason : JSON.stringify(reason);
     console.log(`[${config.username}] Kicked: ${msg}`);
+  });
+
+  // Respawn on death
+  bot.on('death', () => {
+    console.log(`[${config.username}] 💀 Died! Respawning...`);
+    setTimeout(() => bot.respawn(), 3000);
+  });
+
+  bot.on('respawn', () => {
+    console.log(`[${config.username}] ↩️ Respawned!`);
+    if (ownerName && bot.players[ownerName]?.entity) {
+      following = ownerName;
+      bot.pathfinder.setGoal(new goals.GoalFollow(bot.players[ownerName].entity, 3));
+      console.log(`[${config.username}] Following owner after respawn`);
+    }
   });
 }
 
