@@ -16,7 +16,7 @@ class OllamaClient {
         path,
         method,
         headers: body ? { 'Content-Type': 'application/json' } : {},
-        timeout: 30000
+        timeout: 8000 // 8s socket timeout
       };
 
       const req = http.request(options, (res) => {
@@ -30,6 +30,12 @@ class OllamaClient {
             resolve(null);
           }
         });
+        // Also timeout waiting for response body
+        let bodyTimeout = setTimeout(() => {
+          req.destroy();
+          resolve(null);
+        }, 15000);
+        res.on('end', () => clearTimeout(bodyTimeout));
       });
 
       req.on('error', () => resolve(null));
