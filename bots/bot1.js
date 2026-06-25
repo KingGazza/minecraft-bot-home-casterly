@@ -209,6 +209,8 @@ Keep responses very short (1-2 sentences).`;
       const items = bot.inventory.items();
       const c = items.reduce((s, i) => s + i.count, 0);
       bot.chat(`Inventory: ${items.length} types, ${c} total`);
+    } else {
+      bot.chat(`Say "help" for commands, ${username}!`);
     }
   });
 

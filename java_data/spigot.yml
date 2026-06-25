@@ -30,7 +30,7 @@ settings:
   bungeecord: false
   player-shuffle: 0
   user-cache-size: 1000
-  moved-wrongly-threshold: 1.0
+  moved-wrongly-threshold: 100
   moved-too-quickly-multiplier: 10.0
   netty-threads: 4
   attribute:

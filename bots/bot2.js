@@ -206,6 +206,8 @@ function createBot() {
       isGathering = false; following = null; bot.pathfinder.setGoal(null); bot.chat('Stopped!');
     } else if (lower.includes('help')) {
       bot.chat('Commands: gather [qty] [resource], follow, inventory, drop, stop');
+    } else {
+      bot.chat(`Say "help" for commands, ${username}!`);
     }
   });
 
