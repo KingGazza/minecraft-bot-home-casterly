@@ -29,9 +29,7 @@ let ownerLastSpoke = 0;
 const FOCUS_WINDOW_MS = 15000;
 
 const botNames = ['AI_Fighter', 'AI_Gatherer', 'Mr_Angry', 'Mr_Helpful',
-  'Mr_Angry_Nox', 'Mr_Helpful_Nox',
-  'Mr_Angry_KAT', 'Mr_Helpful_KAT',
-  'Mr_Angry_NED', 'Mr_Helpful_NED'];
+  'Mr_Angry_Nox', 'Mr_Helpful_Nox'];
 
 process.on('uncaughtException', (err) => {
   console.error(`[${config.username}] Uncaught: ${err.message}`);
